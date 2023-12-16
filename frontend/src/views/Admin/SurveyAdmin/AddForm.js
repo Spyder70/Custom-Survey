@@ -3,7 +3,6 @@ import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import Preview from './Preview'; // Import the Preview component
 
-
 const DraggableBlock = ({ id, formIndex, name, type, index, moveBlock, isRequired, numButtons, buttonNames, options }) => {
   const [, drag] = useDrag({
     type: 'BLOCK',
@@ -31,7 +30,7 @@ const DraggableBlock = ({ id, formIndex, name, type, index, moveBlock, isRequire
   const isDropdown = type === 'dropdown';
 
   return (
-    <div
+   <div
       ref={(node) => (isFormname ? null : drag(drop(node)))}
       className={`draggable-block ${isButton ? 'button-block' : ''} ${isFormname ? 'formname-block' : ''} ${isCheckbox ? 'checkbox-block' : ''} ${isRadio ? 'radio-block' : ''} ${isDropdown ? 'dropdown-block' : ''}`}
       style={{ border: isButton || isFormname ? 'none' : '' }}
@@ -75,23 +74,29 @@ const DraggableBlock = ({ id, formIndex, name, type, index, moveBlock, isRequire
 };
 
 const AddForm = () => {
-  const [forms, setForms] = useState(() => {
-    const storedForms = localStorage.getItem('forms');
-    return storedForms ? JSON.parse(storedForms) : [];
-  });
-
+  const [forms, setForms] = useState([]);
   const [activeFormIndex, setActiveFormIndex] = useState(null);
   const [blockName, setBlockName] = useState('');
   const [blockType, setBlockType] = useState('text');
   const [isRequired, setIsRequired] = useState(false);
-  const [numButtons, setNumButtons] = useState(0);
+  const [numButtons, setNumButtons] = useState('');
   const [buttonNames, setButtonNames] = useState(Array(numButtons).fill(''));
   const [options, setOptions] = useState([]);
   const [newOption, setNewOption] = useState('');
 
-  useEffect(() => {
-    localStorage.setItem('forms', JSON.stringify(forms));
-  }, [forms]);
+  const isCheckboxOrRadio = blockType === 'checkbox' || blockType === 'radio';
+
+  const setNumButtonsAndUpdateNames = (newNumButtons) => {
+    newNumButtons = parseInt(newNumButtons);
+    if (isNaN(newNumButtons) || newNumButtons <= 0) {
+      alert('Please enter a valid positive integer for the number of buttons.');
+      return;
+    }
+
+    const newButtonNames = Array(newNumButtons).fill('').map((_, index) => buttonNames[index] || '');
+    setNumButtons(newNumButtons.toString()); 
+    setButtonNames(newButtonNames);
+  };
 
   const addOption = () => {
     if (newOption.trim() !== '') {
@@ -106,18 +111,6 @@ const AddForm = () => {
     setOptions(updatedOptions);
   };
 
-  const setNumButtonsAndUpdateNames = (newNumButtons) => {
-    newNumButtons = parseInt(newNumButtons);
-    if (isNaN(newNumButtons) || newNumButtons < 0) {
-      alert('Please enter a valid positive integer for the number of buttons.');
-      return;
-    }
-
-    const newButtonNames = Array(newNumButtons).fill('').map((_, index) => buttonNames[index] || '');
-    setNumButtons(newNumButtons);
-    setButtonNames(newButtonNames);
-  };
-
   const addBlock = () => {
     if (activeFormIndex === null) {
       alert('Please add a form first then you can add blocks.');
@@ -127,6 +120,7 @@ const AddForm = () => {
     if (
       blockName.trim() === '' ||
       blockType.trim() === '' ||
+      (isCheckboxOrRadio && numButtons <= 0) ||
       (blockType !== 'formname' && blockType !== 'button' && isRequired === '')
     ) {
       alert('Please fill in all the fields.');
@@ -139,7 +133,7 @@ const AddForm = () => {
       return;
     }
 
-    if ((blockType === 'checkbox' || blockType === 'radio') && (numButtons <= 0 || buttonNames.some(name => name.trim() === ''))) {
+    if (isCheckboxOrRadio && buttonNames.some(name => name.trim() === '')) {
       alert('Please fill in all the fields for checkbox or radio buttons.');
       return;
     }
@@ -178,18 +172,15 @@ const AddForm = () => {
   const moveBlock = (dragIndex, hoverIndex, formIndex) => {
     const newForms = [...forms];
 
-    // Ensure formIndex is within bounds
     if (formIndex >= 0 && formIndex < newForms.length) {
       const [draggedBlock] = newForms[formIndex].blocks.splice(dragIndex, 1);
 
       if (draggedBlock) {
-        // Ensure the type property exists on draggedBlock
         if (!draggedBlock.hasOwnProperty('type')) {
           console.error('Block is missing the "type" property:', draggedBlock);
           return;
         }
 
-        // Ensure the blocks array exists on the form
         if (!newForms[formIndex].hasOwnProperty('blocks')) {
           console.error('Form is missing the "blocks" property:', newForms[formIndex]);
           return;
@@ -207,8 +198,12 @@ const AddForm = () => {
   };
 
   const addForm = () => {
-    const newForm = { blocks: [] };
+    if (activeFormIndex !== null) {
+      alert('Please deactivate the existing form before adding a new one.');
+      return;
+    }
 
+    const newForm = { blocks: [] };
     setForms([...forms, newForm]);
     setActiveFormIndex(forms.length);
   };
@@ -216,9 +211,8 @@ const AddForm = () => {
   const deleteForm = (formIndex) => {
     const updatedForms = forms.filter((form, index) => index !== formIndex);
     setForms(updatedForms);
-    setActiveFormIndex(Math.max(0, formIndex - 1));
+    setActiveFormIndex(null);
   };
-
   const activateForm = (formIndex) => {
     const updatedForms = [...forms];
     updatedForms[formIndex].isActive = true;
@@ -233,7 +227,6 @@ const AddForm = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-
       <style>
         {`
  /* Your CSS goes here */
@@ -498,14 +491,14 @@ a button:hover {
           </select>
         </label>
 
-        {blockType === 'checkbox' || blockType === 'radio' ? (
+        {isCheckboxOrRadio ? (
           <div>
             <label>
               Number of Buttons:
               <input
                 type="number"
                 value={numButtons}
-                onChange={(e) => setNumButtonsAndUpdateNames(parseInt(e.target.value))}
+                onChange={(e) => setNumButtonsAndUpdateNames(e.target.value)}
                 required
               />
             </label>
@@ -568,8 +561,6 @@ a button:hover {
         <span></span><span></span>     <span></span><span></span><span></span>
         <button onClick={addForm} style={{ marginRight: '100px' }}>Add Form</button>
 
-
-
         {forms.map((form, formIndex) => (
           <div key={formIndex}>
             <br></br>
@@ -592,7 +583,6 @@ a button:hover {
                   options={block.options}
                 />
               ))}
-
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
               <button
