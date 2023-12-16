@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import Preview from './Preview'; // Import the Preview component
+import Preview from './Preview'; 
 
 const DraggableBlock = ({ id, formIndex, name, type, index, moveBlock, isRequired, numButtons, buttonNames, options }) => {
   const [, drag] = useDrag({
