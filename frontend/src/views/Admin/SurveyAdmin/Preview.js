@@ -111,7 +111,7 @@ a button:hover {
   .block-card {
     border: 2px dashed #ddd;
     padding: 20px;
-    margin: 20px auto; /* Set margin to 'auto' for horizontal centering */
+    margin: 20px auto;
     width: 600px;
 
   }
